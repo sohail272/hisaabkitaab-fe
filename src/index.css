@@ -1,0 +1,111 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+html,
+body,
+#root {
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  height: 100%;
+  overflow-x: hidden;
+}
+
+/* Base styles */
+* {
+  box-sizing: border-box;
+}
+
+/* Utility classes */
+.btn {
+  @apply px-4 py-2 rounded-lg font-medium transition-all duration-200;
+  @apply border border-gray-300 bg-white text-gray-700;
+  @apply hover:bg-gray-50 hover:border-gray-400;
+  @apply disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-white disabled:hover:border-gray-300;
+  @apply focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-1;
+  @apply active:scale-[0.98];
+}
+
+.btn-primary {
+  @apply bg-blue-600 text-white border-blue-600;
+  @apply hover:bg-blue-700 hover:border-blue-700;
+  @apply disabled:hover:bg-blue-600 disabled:hover:border-blue-600;
+  @apply focus:ring-blue-500;
+}
+
+.btn-secondary {
+  @apply bg-gray-200 text-gray-800 border-gray-200;
+  @apply hover:bg-gray-300 hover:border-gray-300;
+}
+
+.btn-danger {
+  @apply bg-red-600 text-white border-red-600;
+  @apply hover:bg-red-700 hover:border-red-700;
+  @apply disabled:hover:bg-red-600 disabled:hover:border-red-600;
+  @apply focus:ring-red-500;
+}
+
+.btn-success {
+  @apply bg-green-600 text-white border-green-600;
+  @apply hover:bg-green-700 hover:border-green-700;
+  @apply disabled:hover:bg-green-600 disabled:hover:border-green-600;
+  @apply focus:ring-green-500;
+}
+
+.btn-sm {
+  @apply px-3 py-1.5 text-sm;
+}
+
+.btn-xs {
+  @apply px-2 py-1 text-xs;
+}
+
+.input {
+  @apply w-full py-2 border border-gray-300 rounded-lg;
+  @apply pr-3 pl-3;
+  @apply focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500;
+  @apply disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-gray-100;
+}
+
+/* Allow padding-left override for search inputs with icons */
+input.input.pl-12,
+.input.pl-12 {
+  padding-left: 3rem !important;
+}
+
+input.input.pl-11,
+.input.pl-11 {
+  padding-left: 2.75rem !important;
+}
+
+input.input.pl-10,
+.input.pl-10 {
+  padding-left: 2.5rem !important;
+}
+
+.card {
+  @apply bg-white rounded-lg shadow-sm p-4 md:p-6;
+  @apply border border-gray-200;
+}
+
+/* Page container spacing */
+.page-container {
+  @apply p-4 md:p-6 max-w-7xl mx-auto;
+}
+
+/* Search input styling */
+.search-input {
+  @apply input pl-12;
+}
+
+/* Table responsive styling */
+.table-container {
+  @apply overflow-x-auto -mx-4 md:mx-0;
+}
+
+.table-container table {
+  @apply min-w-full divide-y divide-gray-200;
+}
+
+
