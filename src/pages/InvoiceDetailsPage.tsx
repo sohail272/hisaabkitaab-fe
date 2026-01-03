@@ -136,7 +136,7 @@ export default function InvoiceDetailsPage() {
             } else {
               throw new Error("execCommand failed");
             }
-          } catch (execErr) {
+          } catch {
             // Last resort: show text for manual copy
             prompt("Copy this invoice information:", invoiceText);
           }
@@ -378,7 +378,7 @@ export default function InvoiceDetailsPage() {
                   <div className="flex justify-between items-center py-2 border-b border-gray-200">
                     <span className="text-sm text-gray-600">Round Off:</span>
                     <span className="text-sm text-gray-900">
-                      {parseFloat(invoice.roundoff) > 0 ? "+" : ""}₹{money(Math.abs(parseFloat(invoice.roundoff)))}
+                      {parseFloat(invoice.roundoff) > 0 ? "+" : ""}₹{money(String(Math.abs(parseFloat(invoice.roundoff))))}
                     </span>
                   </div>
                 )}

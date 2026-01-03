@@ -280,7 +280,7 @@ export default function PurchaseDetailsPage() {
             Payment History ({payments.length})
           </div>
           <div className="space-y-3">
-            {payments.map((payment: any) => (
+            {payments.map((payment: { id: number; amount: string; payment_method?: string | null; paid_at?: string | null; note?: string | null }) => (
               <div key={payment.id} className="flex justify-between items-center py-2 border-b border-gray-100 last:border-0">
                 <div>
                   <div className="font-medium text-gray-900">₹{money(String(payment.amount))}</div>

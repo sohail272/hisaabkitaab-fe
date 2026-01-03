@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { api, type Product, type Vendor } from "../api";
+import { api, type Vendor } from "../api";
 
 export default function NewProductPage() {
   const navigate = useNavigate();

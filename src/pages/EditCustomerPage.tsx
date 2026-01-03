@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link, useParams, useNavigate } from "react-router-dom";
-import { api, type Customer } from "../api";
+import { api } from "../api";
 
 export default function EditCustomerPage() {
   const { id } = useParams<{ id: string }>();

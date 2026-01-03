@@ -1,6 +1,6 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
-import { api, type Customer, type Invoice, type InvoiceItemInput, type Product } from "../api";
+import { api, type Customer, type InvoiceItemInput, type Product } from "../api";
 
 type Line = {
   id?: number;
@@ -43,7 +43,7 @@ export default function EditInvoicePage() {
   const [productSearchQueries, setProductSearchQueries] = useState<Map<number, string>>(new Map());
   const [showProductDropdowns, setShowProductDropdowns] = useState<Map<number, boolean>>(new Map());
 
-  async function loadData() {
+  const loadData = useCallback(async () => {
     if (!id) return;
     setLoadingInvoice(true);
     setError(null);
@@ -100,16 +100,16 @@ export default function EditInvoicePage() {
           }))
         );
       }
-    } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : "Failed to load invoice");
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Failed to load invoice");
     } finally {
       setLoadingInvoice(false);
     }
-  }
+  }, [id]);
 
   useEffect(() => {
     loadData();
-  }, [id]);
+  }, [loadData]);
 
   // Check for existing customer by phone when phone is entered
   useEffect(() => {
@@ -125,7 +125,7 @@ export default function EditInvoicePage() {
           } else {
             setExistingCustomer(null);
           }
-        } catch (e: unknown) {
+        } catch {
           // Silently fail
         }
       };
@@ -135,7 +135,7 @@ export default function EditInvoicePage() {
     } else {
       setExistingCustomer(null);
     }
-  }, [customerPhone]);
+  }, [customerPhone, customerName]);
 
   const productById = useMemo(() => {
     const m = new Map<number, Product>();
@@ -217,7 +217,7 @@ export default function EditInvoicePage() {
       }));
 
     try {
-      let customerData: { 
+      const customerData: { 
         customer_name?: string; 
         customer_phone?: string;
         update_customer_name?: boolean;
@@ -338,7 +338,6 @@ export default function EditInvoicePage() {
 
         <div className="grid gap-3">
           {lines.map((l, idx) => {
-            const p = l.product_id ? productById.get(l.product_id as number) : null;
             const filteredProducts = getFilteredProducts(idx);
             const searchQuery = productSearchQueries.get(idx) || "";
             const selectedProduct = l.product_id ? productById.get(l.product_id as number) : null;

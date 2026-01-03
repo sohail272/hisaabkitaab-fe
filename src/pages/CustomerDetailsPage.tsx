@@ -1,10 +1,9 @@
 import { useEffect, useState } from "react";
-import { Link, useParams, useNavigate } from "react-router-dom";
+import { Link, useParams } from "react-router-dom";
 import { api, type Customer } from "../api";
 
 export default function CustomerDetailsPage() {
   const { id } = useParams<{ id: string }>();
-  const nav = useNavigate();
   const [customer, setCustomer] = useState<Customer | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
