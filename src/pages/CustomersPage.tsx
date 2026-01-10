@@ -1,15 +1,22 @@
 import { useEffect, useState, useMemo } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { api, type Customer } from "../api";
+import { useAuth } from "../contexts/AuthContext";
+import ConfirmModal from "../components/ConfirmModal";
 
 export default function CustomersPage() {
   const nav = useNavigate();
+  const { currentStore } = useAuth();
   const [items, setItems] = useState<Customer[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<number | null>(null);
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
   const [searchQuery, setSearchQuery] = useState("");
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState<{ id: number; name: string } | null>(null);
+  const [showBulkDeleteModal, setShowBulkDeleteModal] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
 
   async function load() {
     setLoading(true);
@@ -26,7 +33,7 @@ export default function CustomersPage() {
 
   useEffect(() => {
     load();
-  }, []);
+  }, [currentStore?.id]);
 
   const filteredItems = useMemo(() => {
     if (!searchQuery.trim()) return items;
@@ -62,30 +69,41 @@ export default function CustomersPage() {
   const allSelected = filteredItems.length > 0 && selectedIds.size === filteredItems.length;
   const someSelected = selectedIds.size > 0 && selectedIds.size < filteredItems.length;
 
-  async function handleDelete(id: number, name: string) {
-    if (!confirm(`Are you sure you want to delete "${name}"? This action cannot be undone.`)) {
-      return;
-    }
+  const handleDeleteClick = (id: number, name: string) => {
+    setDeleteTarget({ id, name });
+    setShowDeleteModal(true);
+  };
 
-    setDeletingId(id);
-    setError(null);
+  const handleDeleteConfirm = async () => {
+    if (!deleteTarget) return;
+
+    setDeletingId(deleteTarget.id);
+    setDeleteError(null);
     try {
-      await api.deleteCustomer(id);
+      await api.deleteCustomer(deleteTarget.id);
+      // Only close modal and reload on success
+      setShowDeleteModal(false);
+      setDeleteTarget(null);
+      setDeleteError(null);
       await load();
       setSelectedIds(new Set());
     } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : "Delete failed");
+      // Keep modal open and show error - DO NOT reload data
+      const errorMessage = e instanceof Error ? e.message : "Delete failed";
+      setDeleteError(errorMessage);
+      // Don't clear items - they should remain in the table
     } finally {
       setDeletingId(null);
     }
-  }
+  };
 
-  const handleBulkDelete = async () => {
+  const handleBulkDeleteClick = () => {
     if (selectedIds.size === 0) return;
-    if (!confirm(`Are you sure you want to delete ${selectedIds.size} customer(s)? This action cannot be undone.`)) {
-      return;
-    }
+    setShowBulkDeleteModal(true);
+  };
 
+  const handleBulkDeleteConfirm = async () => {
+    setShowBulkDeleteModal(false);
     setError(null);
     const idsArray = Array.from(selectedIds);
     try {
@@ -135,7 +153,7 @@ export default function CustomersPage() {
           </div>
           {selectedIds.size > 0 && (
             <button
-              onClick={handleBulkDelete}
+                onClick={handleBulkDeleteClick}
               className="btn btn-danger whitespace-nowrap"
             >
               Delete Selected ({selectedIds.size})
@@ -234,7 +252,7 @@ export default function CustomersPage() {
                         <button
                           onClick={(e) => {
                             e.stopPropagation();
-                            handleDelete(customer.id, customer.name);
+                            handleDeleteClick(customer.id, customer.name);
                           }}
                           disabled={deletingId === customer.id}
                           className="p-1.5 text-red-600 hover:bg-red-50 rounded transition-colors disabled:opacity-50"
@@ -253,6 +271,36 @@ export default function CustomersPage() {
           </div>
         </div>
       )}
+
+      {/* Delete Confirmation Modal */}
+      <ConfirmModal
+        isOpen={showDeleteModal}
+        title="Delete Customer"
+        message={
+          deleteError && deleteTarget
+            ? deleteError
+            : deleteTarget
+            ? `Are you sure you want to delete "${deleteTarget.name}"? This action cannot be undone.`
+            : ""
+        }
+        onConfirm={handleDeleteConfirm}
+        onCancel={() => {
+          setShowDeleteModal(false);
+          setDeleteTarget(null);
+          setDeleteError(null);
+        }}
+        isLoading={!!deletingId}
+        error={deleteError}
+      />
+
+      {/* Bulk Delete Confirmation Modal */}
+      <ConfirmModal
+        isOpen={showBulkDeleteModal}
+        title="Delete Customers"
+        message={`Are you sure you want to delete ${selectedIds.size} customer(s)? This action cannot be undone.`}
+        onConfirm={handleBulkDeleteConfirm}
+        onCancel={() => setShowBulkDeleteModal(false)}
+      />
     </div>
   );
 }

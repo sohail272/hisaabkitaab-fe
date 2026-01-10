@@ -1,5 +1,9 @@
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { useState, useEffect } from "react";
 import Layout from "./ui/Layout";
+import ProtectedRoute from "./components/ProtectedRoute";
+import OnboardingPage from "./pages/OnboardingPage";
+import LoginPage from "./pages/LoginPage";
 import DashboardPage from "./pages/DashboardPage";
 import ProductsPage from "./pages/ProductsPage";
 import NewProductPage from "./pages/NewProductPage";
@@ -21,36 +25,287 @@ import InvoicesPage from "./pages/InvoicesPage";
 import NewInvoicePage from "./pages/NewInvoicePage";
 import EditInvoicePage from "./pages/EditInvoicePage";
 import InvoiceDetailsPage from "./pages/InvoiceDetailsPage";
+import StoresPage from "./pages/StoresPage";
+import NewStorePage from "./pages/NewStorePage";
+import UsersPage from "./pages/UsersPage";
+import NewUserPage from "./pages/NewUserPage";
+import EditUserPage from "./pages/EditUserPage";
+import { useAuth } from "./contexts/AuthContext";
+
+function AppRoutes() {
+  const { isAuthenticated } = useAuth();
+  const [needsOnboarding, setNeedsOnboarding] = useState<boolean | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    // Check if onboarding is needed
+    const checkOnboarding = async () => {
+      try {
+        const BASE = import.meta.env.VITE_API_BASE_URL?.replace(/\/$/, '') || 'https://hisaabkitaab-be.onrender.com/api/v1';
+        const response = await fetch(`${BASE}/auth/check_onboarding`);
+        if (response.ok) {
+          const data = await response.json();
+          setNeedsOnboarding(data.needs_onboarding);
+        }
+      } catch (error) {
+        console.error('Failed to check onboarding status:', error);
+        setNeedsOnboarding(false);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    checkOnboarding();
+  }, []);
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-gray-600">Loading...</div>
+      </div>
+    );
+  }
+
+  // Show onboarding if needed and not authenticated
+  if (needsOnboarding && !isAuthenticated) {
+    return <OnboardingPage />;
+  }
+
+  // Show login if not authenticated
+  if (!isAuthenticated) {
+    return <LoginPage />;
+  }
+
+  // Show app routes if authenticated
+  return (
+    <Layout>
+      <Routes>
+        <Route path="/" element={<Navigate to="/dashboard" replace />} />
+        <Route
+          path="/dashboard"
+          element={
+            <ProtectedRoute>
+              <DashboardPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/products"
+          element={
+            <ProtectedRoute>
+              <ProductsPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/products/new"
+          element={
+            <ProtectedRoute requiredRole="store_manager">
+              <NewProductPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/products/:id/edit"
+          element={
+            <ProtectedRoute requiredRole="store_manager">
+              <EditProductPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/products/:id"
+          element={
+            <ProtectedRoute>
+              <ProductDetailsPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/vendors"
+          element={
+            <ProtectedRoute requiredRole="store_manager">
+              <VendorsPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/vendors/new"
+          element={
+            <ProtectedRoute requiredRole="store_manager">
+              <NewVendorPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/vendors/:id/edit"
+          element={
+            <ProtectedRoute requiredRole="store_manager">
+              <EditVendorPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/vendors/:id"
+          element={
+            <ProtectedRoute requiredRole="store_manager">
+              <VendorDetailsPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/customers"
+          element={
+            <ProtectedRoute requiredRole="store_manager">
+              <CustomersPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/customers/new"
+          element={
+            <ProtectedRoute requiredRole="store_manager">
+              <NewCustomerPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/customers/:id/edit"
+          element={
+            <ProtectedRoute requiredRole="store_manager">
+              <EditCustomerPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/customers/:id"
+          element={
+            <ProtectedRoute requiredRole="store_manager">
+              <CustomerDetailsPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/purchases"
+          element={
+            <ProtectedRoute requiredRole="store_manager">
+              <PurchasesPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/purchases/new"
+          element={
+            <ProtectedRoute requiredRole="store_manager">
+              <NewPurchasePage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/purchases/:id/edit"
+          element={
+            <ProtectedRoute requiredRole="store_manager">
+              <EditPurchasePage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/purchases/:id"
+          element={
+            <ProtectedRoute requiredRole="store_manager">
+              <PurchaseDetailsPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/invoices"
+          element={
+            <ProtectedRoute>
+              <InvoicesPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/invoices/new"
+          element={
+            <ProtectedRoute>
+              <NewInvoicePage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/invoices/:id/edit"
+          element={
+            <ProtectedRoute requiredRole="store_manager">
+              <EditInvoicePage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/invoices/:id"
+          element={
+            <ProtectedRoute>
+              <InvoiceDetailsPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/stores"
+          element={
+            <ProtectedRoute requiredRole="org_admin">
+              <StoresPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/stores/new"
+          element={
+            <ProtectedRoute requiredRole="org_admin">
+              <NewStorePage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/stores/:id/edit"
+          element={
+            <ProtectedRoute requiredRole="org_admin">
+              <NewStorePage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/users"
+          element={
+            <ProtectedRoute requiredRole="org_admin">
+              <UsersPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/users/new"
+          element={
+            <ProtectedRoute requiredRole="org_admin">
+              <NewUserPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/users/:id/edit"
+          element={
+            <ProtectedRoute requiredRole="org_admin">
+              <EditUserPage />
+            </ProtectedRoute>
+          }
+        />
+      </Routes>
+    </Layout>
+  );
+}
 
 function App() {
   return (
     <BrowserRouter>
-      <Layout>
-        <Routes>
-          <Route path="/" element={<DashboardPage />} />
-          <Route path="/dashboard" element={<DashboardPage />} />
-          <Route path="/products" element={<ProductsPage />} />
-          <Route path="/products/new" element={<NewProductPage />} />
-          <Route path="/products/:id/edit" element={<EditProductPage />} />
-          <Route path="/products/:id" element={<ProductDetailsPage />} />
-          <Route path="/vendors" element={<VendorsPage />} />
-          <Route path="/vendors/new" element={<NewVendorPage />} />
-          <Route path="/vendors/:id/edit" element={<EditVendorPage />} />
-          <Route path="/vendors/:id" element={<VendorDetailsPage />} />
-          <Route path="/customers" element={<CustomersPage />} />
-          <Route path="/customers/new" element={<NewCustomerPage />} />
-          <Route path="/customers/:id/edit" element={<EditCustomerPage />} />
-          <Route path="/customers/:id" element={<CustomerDetailsPage />} />
-          <Route path="/purchases" element={<PurchasesPage />} />
-          <Route path="/purchases/new" element={<NewPurchasePage />} />
-          <Route path="/purchases/:id/edit" element={<EditPurchasePage />} />
-          <Route path="/purchases/:id" element={<PurchaseDetailsPage />} />
-          <Route path="/invoices" element={<InvoicesPage />} />
-          <Route path="/invoices/new" element={<NewInvoicePage />} />
-          <Route path="/invoices/:id/edit" element={<EditInvoicePage />} />
-          <Route path="/invoices/:id" element={<InvoiceDetailsPage />} />
-        </Routes>
-      </Layout>
+      <AppRoutes />
     </BrowserRouter>
   );
 }

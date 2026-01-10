@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { api, type Purchase, type Vendor } from "../api";
+import { useAuth } from "../contexts/AuthContext";
+import ConfirmModal from "../components/ConfirmModal";
 
 function money(n?: string) {
   if (!n) return "0";
@@ -29,6 +31,7 @@ function formatTime(dateStr?: string | null) {
 }
 
 export default function PurchasesPage() {
+  const { currentStore } = useAuth();
   const [items, setItems] = useState<Purchase[]>([]);
   const [vendors, setVendors] = useState<Vendor[]>([]);
   const [loading, setLoading] = useState(false);
@@ -36,6 +39,10 @@ export default function PurchasesPage() {
   const [deletingId, setDeletingId] = useState<number | null>(null);
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
   const [searchQuery, setSearchQuery] = useState("");
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState<{ id: number; purchaseNo: string } | null>(null);
+  const [showBulkDeleteModal, setShowBulkDeleteModal] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
 
   const vendorNameById = useMemo(() => {
     const map = new Map<number, string>();
@@ -59,7 +66,7 @@ export default function PurchasesPage() {
 
   useEffect(() => {
     load();
-  }, []);
+  }, [currentStore?.id]);
 
   const filteredItems = useMemo(() => {
     if (!searchQuery.trim()) return items;
@@ -95,30 +102,41 @@ export default function PurchasesPage() {
   const allSelected = filteredItems.length > 0 && selectedIds.size === filteredItems.length;
   const someSelected = selectedIds.size > 0 && selectedIds.size < filteredItems.length;
 
-  async function handleDelete(id: number, purchaseNo: string) {
-    if (!confirm(`Are you sure you want to delete purchase "${purchaseNo}"? This action cannot be undone.`)) {
-      return;
-    }
+  const handleDeleteClick = (id: number, purchaseNo: string) => {
+    setDeleteTarget({ id, purchaseNo });
+    setShowDeleteModal(true);
+  };
 
-    setDeletingId(id);
-    setError(null);
+  const handleDeleteConfirm = async () => {
+    if (!deleteTarget) return;
+
+    setDeletingId(deleteTarget.id);
+    setDeleteError(null);
     try {
-      await api.deletePurchase(id);
+      await api.deletePurchase(deleteTarget.id);
+      // Only close modal and reload on success
+      setShowDeleteModal(false);
+      setDeleteTarget(null);
+      setDeleteError(null);
       await load();
       setSelectedIds(new Set());
     } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : "Delete failed");
+      // Keep modal open and show error - DO NOT reload data
+      const errorMessage = e instanceof Error ? e.message : "Delete failed";
+      setDeleteError(errorMessage);
+      // Don't clear items - they should remain in the table
     } finally {
       setDeletingId(null);
     }
-  }
+  };
 
-  const handleBulkDelete = async () => {
+  const handleBulkDeleteClick = () => {
     if (selectedIds.size === 0) return;
-    if (!confirm(`Are you sure you want to delete ${selectedIds.size} purchase(s)? This action cannot be undone.`)) {
-      return;
-    }
+    setShowBulkDeleteModal(true);
+  };
 
+  const handleBulkDeleteConfirm = async () => {
+    setShowBulkDeleteModal(false);
     setError(null);
     const idsArray = Array.from(selectedIds);
     try {
@@ -152,7 +170,7 @@ export default function PurchasesPage() {
           <div className="flex gap-2 flex-wrap w-full sm:w-auto">
             {selectedIds.size > 0 && (
               <button
-                onClick={handleBulkDelete}
+                onClick={handleBulkDeleteClick}
                 className="btn btn-danger btn-sm text-center"
               >
                 Delete ({selectedIds.size})
@@ -277,9 +295,15 @@ export default function PurchasesPage() {
                         ₹{due.toFixed(2)}
                       </td>
                       <td className="px-3 md:px-6 py-3 md:py-4 whitespace-nowrap">
-                        <span className="inline-flex px-2 py-1 text-xs font-medium rounded-full bg-green-100 text-green-800">
-                          Paid
-                        </span>
+                        {due > 0 ? (
+                          <span className="inline-flex px-2 py-1 text-xs font-medium rounded-full bg-yellow-100 text-yellow-800">
+                            Pending
+                          </span>
+                        ) : (
+                          <span className="inline-flex px-2 py-1 text-xs font-medium rounded-full bg-green-100 text-green-800">
+                            Paid
+                          </span>
+                        )}
                       </td>
                       <td className="px-3 md:px-6 py-3 md:py-4 whitespace-nowrap text-right text-sm font-medium">
                         <div className="flex justify-end gap-3">
@@ -297,7 +321,7 @@ export default function PurchasesPage() {
                             className="text-red-600 hover:text-red-900 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                             onClick={(e) => {
                               e.stopPropagation();
-                              handleDelete(p.id, p.purchase_no);
+                              handleDeleteClick(p.id, p.purchase_no);
                             }}
                             disabled={deletingId === p.id}
                             title={deletingId === p.id ? "Deleting..." : "Delete"}
@@ -322,6 +346,38 @@ export default function PurchasesPage() {
           </div>
         )}
       </div>
+
+      {/* Delete Confirmation Modal */}
+      <ConfirmModal
+        isOpen={showDeleteModal}
+        title="Delete Purchase"
+        message={
+          deleteError && deleteTarget
+            ? deleteError
+            : deleteTarget
+            ? `Are you sure you want to delete purchase "${deleteTarget.purchaseNo}"? This action cannot be undone.`
+            : ""
+        }
+        onConfirm={handleDeleteConfirm}
+        onCancel={() => {
+          setShowDeleteModal(false);
+          setDeleteTarget(null);
+          setDeleteError(null);
+        }}
+        isLoading={!!deletingId}
+        error={deleteError}
+      />
+
+      {/* Bulk Delete Confirmation Modal */}
+      <ConfirmModal
+        isOpen={showBulkDeleteModal}
+        title="Delete Purchases"
+        message={`Are you sure you want to delete ${selectedIds.size} purchase(s)? This action cannot be undone.`}
+        onConfirm={handleBulkDeleteConfirm}
+        onCancel={() => setShowBulkDeleteModal(false)}
+        isLoading={loading && selectedIds.size > 0}
+        error={error}
+      />
     </div>
   );
 }

@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { api, type Product, type PurchaseItemInput, type Vendor } from "../api";
+import { useAuth } from "../contexts/AuthContext";
 
 type Line = {
   product_id: number | "";
@@ -10,6 +11,7 @@ type Line = {
 
 export default function NewPurchasePage() {
   const nav = useNavigate();
+  const { currentStore, user } = useAuth();
 
   const [vendors, setVendors] = useState<Vendor[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
@@ -168,9 +170,13 @@ export default function NewPurchasePage() {
       }));
 
     try {
+      // Get store_id - use currentStore for org admins, or user's store
+      const storeId = currentStore?.id || user?.store?.id;
+      
       await api.createPurchase({
         vendor_id: vendorId as number,
         note: note.trim() || undefined,
+        store_id: storeId,
         purchase_items_attributes,
         payment: paid > 0
           ? {
@@ -406,9 +412,9 @@ export default function NewPurchasePage() {
           </button>
         </div>
 
-        <div className="flex justify-between gap-3 mt-4 pt-4 border-t border-gray-200">
-          <div className="text-xs text-gray-600">Subtotal (client preview):</div>
-          <div className="font-extrabold">₹{subtotal.toFixed(2)}</div>
+        <div className="flex justify-between items-center gap-3 mt-4 pt-4 border-t border-gray-200">
+          <div className="text-xs sm:text-sm text-gray-600">Subtotal (client preview):</div>
+          <div className="text-sm sm:text-base font-extrabold">₹{subtotal.toFixed(2)}</div>
         </div>
 
         {/* Payment Section */}
@@ -452,14 +458,14 @@ export default function NewPurchasePage() {
               placeholder="Transaction ID, cheque number, etc."
             />
           </div>
-          <div className="mt-3 grid grid-cols-2 gap-4 p-3 bg-gray-50 rounded-lg">
+          <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 p-3 sm:p-4 bg-gray-50 rounded-lg">
             <div>
               <div className="text-xs text-gray-600 mb-1">Total Amount</div>
-              <div className="text-lg font-bold text-gray-900">₹{grandTotal.toFixed(2)}</div>
+              <div className="text-base sm:text-lg font-bold text-gray-900">₹{grandTotal.toFixed(2)}</div>
             </div>
             <div>
               <div className="text-xs text-gray-600 mb-1">Remaining</div>
-              <div className={`text-lg font-bold ${remaining > 0 ? "text-red-600" : "text-green-600"}`}>
+              <div className={`text-base sm:text-lg font-bold ${remaining > 0 ? "text-red-600" : "text-green-600"}`}>
                 ₹{remaining.toFixed(2)}
               </div>
             </div>

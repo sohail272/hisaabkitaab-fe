@@ -53,6 +53,13 @@ body,
   @apply focus:ring-green-500;
 }
 
+.btn-warning {
+  @apply bg-yellow-600 text-white border-yellow-600;
+  @apply hover:bg-yellow-700 hover:border-yellow-700;
+  @apply disabled:hover:bg-yellow-600 disabled:hover:border-yellow-600;
+  @apply focus:ring-yellow-500;
+}
+
 .btn-sm {
   @apply px-3 py-1.5 text-sm;
 }

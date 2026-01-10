@@ -134,9 +134,15 @@ export default function PurchaseDetailsPage() {
               </div>
               <div>
                 <div className="text-xs text-gray-600">Status</div>
-                <span className="inline-flex px-2 py-1 text-xs font-medium rounded-full bg-green-100 text-green-800">
-                  Paid
-                </span>
+                {due > 0 ? (
+                  <span className="inline-flex px-2 py-1 text-xs font-medium rounded-full bg-yellow-100 text-yellow-800">
+                    Pending
+                  </span>
+                ) : (
+                  <span className="inline-flex px-2 py-1 text-xs font-medium rounded-full bg-green-100 text-green-800">
+                    Paid
+                  </span>
+                )}
               </div>
             </div>
           </div>

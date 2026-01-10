@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { api, type Invoice } from "../api";
+import ConfirmModal from "../components/ConfirmModal";
 
 function money(n?: string) {
   if (!n) return "0.00";
@@ -26,6 +27,8 @@ export default function InvoiceDetailsPage() {
   const [deleting, setDeleting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [sharing, setSharing] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
   const invoiceRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -75,7 +78,25 @@ export default function InvoiceDetailsPage() {
 
   const items = invoice.invoice_items || [];
 
+  const handleDeleteConfirm = async () => {
+    if (!invoice) return;
+
+    setDeleting(true);
+    setDeleteError(null);
+    try {
+      await api.deleteInvoice(invoice.id);
+      nav("/invoices");
+    } catch (e: unknown) {
+      const errorMessage = e instanceof Error ? e.message : "Delete failed";
+      setDeleteError(errorMessage);
+    } finally {
+      setDeleting(false);
+    }
+  };
+
   const handleShare = async () => {
+    if (!invoice) return;
+    
     setSharing(true);
     try {
       const invoiceText = `Invoice ${invoice.invoice_no}\n` +
@@ -195,21 +216,7 @@ export default function InvoiceDetailsPage() {
               <span>Edit</span>
             </Link>
             <button
-              onClick={async () => {
-                if (!confirm(`Are you sure you want to delete invoice "${invoice.invoice_no}"? This action cannot be undone.`)) {
-                  return;
-                }
-                setDeleting(true);
-                setError(null);
-                try {
-                  await api.deleteInvoice(invoice.id);
-                  nav("/invoices");
-                } catch (e: unknown) {
-                  setError(e instanceof Error ? e.message : "Delete failed");
-                } finally {
-                  setDeleting(false);
-                }
-              }}
+              onClick={() => setShowDeleteModal(true)}
               disabled={deleting}
               className="btn btn-danger flex-1 sm:flex-initial text-center flex items-center justify-center gap-2 whitespace-nowrap"
             >
@@ -261,9 +268,12 @@ export default function InvoiceDetailsPage() {
           {/* Vendor/Company Information */}
           <div className="mb-6 pb-4 border-b border-gray-200">
             <div className="text-sm">
-              <div className="text-gray-700">Mobile: <span className="font-semibold">8652756882</span></div>
-              <div className="text-gray-700">Email: <span className="font-semibold">smk.classy@gmail.com</span></div>
-              <div className="text-gray-700">PAN: <span className="font-semibold">AANPQ1662K</span></div>
+              {invoice.store?.phone && (
+                <div className="text-gray-700">Mobile: <span className="font-semibold">{invoice.store.phone}</span></div>
+              )}
+              {invoice.store?.email && (
+                <div className="text-gray-700">Email: <span className="font-semibold">{invoice.store.email}</span></div>
+              )}
             </div>
           </div>
 
@@ -378,7 +388,7 @@ export default function InvoiceDetailsPage() {
                   <div className="flex justify-between items-center py-2 border-b border-gray-200">
                     <span className="text-sm text-gray-600">Round Off:</span>
                     <span className="text-sm text-gray-900">
-                      {parseFloat(invoice.roundoff) > 0 ? "+" : ""}₹{money(String(Math.abs(parseFloat(invoice.roundoff))))}
+                      {parseFloat(invoice.roundoff) > 0 ? "+" : "-"}₹{money(String(Math.abs(parseFloat(invoice.roundoff))))}
                     </span>
                   </div>
                 )}
@@ -427,6 +437,26 @@ export default function InvoiceDetailsPage() {
           }
         }
       `}</style>
+
+      {/* Delete Confirmation Modal */}
+      {invoice && (
+        <ConfirmModal
+          isOpen={showDeleteModal}
+          title="Delete Invoice"
+          message={
+            deleteError
+              ? deleteError
+              : `Are you sure you want to delete invoice "${invoice.invoice_no}"? This action cannot be undone.`
+          }
+          onConfirm={handleDeleteConfirm}
+          onCancel={() => {
+            setShowDeleteModal(false);
+            setDeleteError(null);
+          }}
+          isLoading={deleting}
+          error={deleteError}
+        />
+      )}
     </div>
   );
 }

@@ -1,12 +1,68 @@
-const BASE = import.meta.env.VITE_API_BASE_URL as string;
+// Get API base URL with runtime fallback
+function getApiBase(): string {
+  const envBase = import.meta.env.VITE_API_BASE_URL;
+  
+  if (envBase && typeof envBase === 'string' && envBase.trim() !== '') {
+    if (envBase.startsWith('http://') || envBase.startsWith('https://')) {
+      return envBase.replace(/\/$/, '');
+    }
+  }
+  
+  return 'https://hisaabkitaab-be.onrender.com/api/v1';
+}
+
+const BASE = getApiBase();
+
+// Get auth token from localStorage
+function getAuthToken(): string | null {
+  return localStorage.getItem('auth_token');
+}
 
 async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
-  const res = await fetch(`${BASE}${path}`, {
-    headers: {
-      "Content-Type": "application/json",
-      ...(options.headers || {}),
-    },
+  const token = getAuthToken();
+  const headers: Record<string, string> = {
+    "Content-Type": "application/json",
+  };
+  
+  // Merge existing headers
+  if (options.headers) {
+    if (options.headers instanceof Headers) {
+      options.headers.forEach((value, key) => {
+        headers[key] = value;
+      });
+    } else if (Array.isArray(options.headers)) {
+      options.headers.forEach(([key, value]) => {
+        headers[key] = value;
+      });
+    } else {
+      Object.assign(headers, options.headers);
+    }
+  }
+  
+  if (token) {
+    headers["Authorization"] = `Bearer ${token}`;
+  }
+
+  // Get current store from localStorage for org admins
+  const currentStoreStr = localStorage.getItem('current_store');
+  let url = `${BASE}${path}`;
+  
+  // Add store_id query param if store is selected (for org admins)
+  if (currentStoreStr) {
+    try {
+      const currentStore = JSON.parse(currentStoreStr);
+      if (currentStore?.id) {
+        const separator = url.includes('?') ? '&' : '?';
+        url = `${url}${separator}store_id=${currentStore.id}`;
+      }
+    } catch {
+      // Ignore parse errors
+    }
+  }
+
+  const res = await fetch(url, {
     ...options,
+    headers,
   });
 
   const text = await res.text();
@@ -41,6 +97,33 @@ export type Vendor = {
   email?: string | null;
   address?: string | null;
   active: boolean;
+};
+
+export type Store = {
+  id: number;
+  name: string;
+  code: string;
+  address?: string | null;
+  phone?: string | null;
+  active: boolean;
+  organization_id: number;
+};
+
+export type User = {
+  id: number;
+  name: string;
+  email: string;
+  phone?: string | null;
+  role: 'store_worker' | 'store_manager' | 'org_admin';
+  active: boolean;
+  organization_id: number;
+  store?: {
+    id: number;
+    name: string;
+    code: string;
+  } | null;
+  created_at?: string;
+  updated_at?: string;
 };
 
 export type Customer = {
@@ -111,6 +194,7 @@ export type Invoice = {
   customer_name?: string | null;
   customer_phone?: string | null;
   customer?: Customer | null;
+  store?: Store | null;
 
   subtotal: string;
   tax_total: string;
@@ -254,4 +338,23 @@ export const api = {
       purchases: number;
     };
   }>(`/dashboard`),
+
+  // Stores (org admin only)
+  listStores: () => request<Store[]>(`/stores`),
+  getStore: (id: number) => request<Store>(`/stores/${id}`),
+  createStore: (body: Partial<Store>) =>
+    request<Store>(`/stores`, { method: "POST", body: JSON.stringify({ store: body }) }),
+  updateStore: (id: number, body: Partial<Store>) =>
+    request<Store>(`/stores/${id}`, { method: "PUT", body: JSON.stringify({ store: body }) }),
+  getAvailableStores: () => request<Store[]>(`/stores/available`),
+
+  // Users (org admin only)
+  listUsers: () => request<User[]>(`/users`),
+  getUser: (id: number) => request<User>(`/users/${id}`),
+  createUser: (body: Partial<User & { password: string }>) =>
+    request<User>(`/users`, { method: "POST", body: JSON.stringify({ user: body }) }),
+  updateUser: (id: number, body: Partial<User & { password?: string }>) =>
+    request<User>(`/users/${id}`, { method: "PUT", body: JSON.stringify({ user: body }) }),
+  deleteUser: (id: number) =>
+    request<void>(`/users/${id}`, { method: "DELETE" }),
 };

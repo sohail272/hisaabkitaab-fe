@@ -1,14 +1,21 @@
 import { useEffect, useState, useMemo } from "react";
 import { Link } from "react-router-dom";
 import { api, type Vendor } from "../api";
+import { useAuth } from "../contexts/AuthContext";
+import ConfirmModal from "../components/ConfirmModal";
 
 export default function VendorsPage() {
+  const { currentStore } = useAuth();
   const [items, setItems] = useState<Vendor[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<number | null>(null);
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
   const [searchQuery, setSearchQuery] = useState("");
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState<{ id: number; name: string } | null>(null);
+  const [showBulkDeleteModal, setShowBulkDeleteModal] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
 
   async function load() {
     setLoading(true);
@@ -25,7 +32,7 @@ export default function VendorsPage() {
 
   useEffect(() => {
     load();
-  }, []);
+  }, [currentStore?.id]);
 
   const filteredItems = useMemo(() => {
     if (!searchQuery.trim()) return items;
@@ -61,30 +68,42 @@ export default function VendorsPage() {
   const allSelected = filteredItems.length > 0 && selectedIds.size === filteredItems.length;
   const someSelected = selectedIds.size > 0 && selectedIds.size < filteredItems.length;
 
-  async function handleDelete(id: number, name: string) {
-    if (!confirm(`Are you sure you want to delete "${name}"? This action cannot be undone.`)) {
-      return;
-    }
+  const handleDeleteClick = (id: number, name: string) => {
+    setDeleteTarget({ id, name });
+    setShowDeleteModal(true);
+  };
 
-    setDeletingId(id);
-    setError(null);
+  const handleDeleteConfirm = async () => {
+    if (!deleteTarget) return;
+
+    setDeletingId(deleteTarget.id);
+    setDeleteError(null);
+    // Don't clear main error - it's separate from delete error
     try {
-      await api.deleteVendor(id);
+      await api.deleteVendor(deleteTarget.id);
+      // Only close modal and reload on success
+      setShowDeleteModal(false);
+      setDeleteTarget(null);
+      setDeleteError(null);
       await load();
       setSelectedIds(new Set());
     } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : "Delete failed");
+      // Keep modal open and show error - DO NOT reload data
+      const errorMessage = e instanceof Error ? e.message : "Delete failed";
+      setDeleteError(errorMessage);
+      // Don't clear items - they should remain in the table
     } finally {
       setDeletingId(null);
     }
-  }
+  };
 
-  const handleBulkDelete = async () => {
+  const handleBulkDeleteClick = () => {
     if (selectedIds.size === 0) return;
-    if (!confirm(`Are you sure you want to delete ${selectedIds.size} vendor(s)? This action cannot be undone.`)) {
-      return;
-    }
+    setShowBulkDeleteModal(true);
+  };
 
+  const handleBulkDeleteConfirm = async () => {
+    setShowBulkDeleteModal(false);
     setError(null);
     const idsArray = Array.from(selectedIds);
     try {
@@ -118,7 +137,7 @@ export default function VendorsPage() {
           <div className="flex gap-2 flex-wrap w-full sm:w-auto">
             {selectedIds.size > 0 && (
               <button
-                onClick={handleBulkDelete}
+                onClick={handleBulkDeleteClick}
                 className="btn btn-danger btn-sm text-center"
               >
                 Delete ({selectedIds.size})
@@ -256,7 +275,7 @@ export default function VendorsPage() {
                           className="text-red-600 hover:text-red-900 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                           onClick={(e) => {
                             e.stopPropagation();
-                            handleDelete(v.id, v.name);
+                            handleDeleteClick(v.id, v.name);
                           }}
                           disabled={deletingId === v.id}
                           title={deletingId === v.id ? "Deleting..." : "Delete"}
@@ -280,6 +299,36 @@ export default function VendorsPage() {
           </div>
         )}
       </div>
+
+      {/* Delete Confirmation Modal */}
+      <ConfirmModal
+        isOpen={showDeleteModal}
+        title="Delete Vendor"
+        message={
+          deleteError && deleteTarget
+            ? deleteError
+            : deleteTarget
+            ? `Are you sure you want to delete "${deleteTarget.name}"? This action cannot be undone.`
+            : ""
+        }
+        onConfirm={handleDeleteConfirm}
+        onCancel={() => {
+          setShowDeleteModal(false);
+          setDeleteTarget(null);
+          setDeleteError(null);
+        }}
+        confirmText={deletingId ? "Deleting..." : "Delete"}
+        isLoading={!!deletingId}
+      />
+
+      {/* Bulk Delete Confirmation Modal */}
+      <ConfirmModal
+        isOpen={showBulkDeleteModal}
+        title="Delete Vendors"
+        message={`Are you sure you want to delete ${selectedIds.size} vendor(s)? This action cannot be undone.`}
+        onConfirm={handleBulkDeleteConfirm}
+        onCancel={() => setShowBulkDeleteModal(false)}
+      />
     </div>
   );
 }

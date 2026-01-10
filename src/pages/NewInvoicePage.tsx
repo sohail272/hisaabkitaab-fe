@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { api, type Customer, type InvoiceItemInput, type Product } from "../api";
+import { useAuth } from "../contexts/AuthContext";
 
 type Line = {
   product_id: number | "";
@@ -10,6 +11,7 @@ type Line = {
 
 export default function NewInvoicePage() {
   const nav = useNavigate();
+  const { currentStore, user } = useAuth();
 
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(false);
@@ -195,12 +197,16 @@ export default function NewInvoicePage() {
       // Convert date to ISO string for backend
       const billedAt = invoiceDate ? new Date(invoiceDate).toISOString() : undefined;
 
+      // Get store_id - use currentStore for org admins, or user's store
+      const storeId = currentStore?.id || user?.store?.id;
+      
       await api.createInvoice({
         ...customerData,
         discount_total: discountAmount > 0 ? discountAmount.toFixed(2) : undefined,
         roundoff: roundoffAmount !== 0 ? roundoffAmount.toFixed(2) : undefined,
         payment_method: paymentMethod,
         billed_at: billedAt,
+        store_id: storeId,
         invoice_items_attributes,
       });
       nav("/invoices");
@@ -419,9 +425,9 @@ export default function NewInvoicePage() {
 
         {/* Totals Section */}
         <div className="mt-4 pt-4 border-t border-gray-200 space-y-2">
-          <div className="flex justify-between gap-3">
-            <div className="text-xs text-gray-600">Subtotal:</div>
-            <div className="font-semibold text-gray-900">₹{subtotal.toFixed(2)}</div>
+          <div className="flex justify-between items-center gap-3">
+            <div className="text-xs sm:text-sm text-gray-600">Subtotal:</div>
+            <div className="text-sm sm:text-base font-semibold text-gray-900">₹{subtotal.toFixed(2)}</div>
           </div>
           
           {/* Discount Section */}
@@ -489,9 +495,9 @@ export default function NewInvoicePage() {
             </div>
           </div>
 
-          <div className="flex justify-between gap-3 pt-2 border-t border-gray-200">
-            <div className="text-sm font-semibold text-gray-900">Grand Total:</div>
-            <div className="text-lg font-extrabold text-gray-900">₹{grandTotal.toFixed(2)}</div>
+          <div className="flex justify-between items-center gap-3 pt-2 border-t border-gray-200">
+            <div className="text-sm sm:text-base font-semibold text-gray-900">Grand Total:</div>
+            <div className="text-base sm:text-lg font-extrabold text-gray-900">₹{grandTotal.toFixed(2)}</div>
           </div>
         </div>
 

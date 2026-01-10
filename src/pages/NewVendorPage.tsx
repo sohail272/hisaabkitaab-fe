@@ -1,9 +1,11 @@
 import { useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { api, type Vendor } from "../api";
+import { useAuth } from "../contexts/AuthContext";
 
 export default function NewVendorPage() {
   const navigate = useNavigate();
+  const { currentStore, user } = useAuth();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -21,11 +23,30 @@ export default function NewVendorPage() {
     setLoading(true);
     setError(null);
     try {
+      // Get store_id - use currentStore for org admins, or user's store
+      const storeId = currentStore?.id || user?.store?.id;
+      
+      // Check for duplicate vendor name (backend will also validate, but this gives immediate feedback)
+      try {
+        const existingVendors = await api.listVendors();
+        const duplicate = existingVendors.find(
+          (v) => v.name.toLowerCase() === name.trim().toLowerCase()
+        );
+        if (duplicate) {
+          setError(`A vendor with name "${name.trim()}" already exists in this store`);
+          setLoading(false);
+          return;
+        }
+      } catch {
+        // If check fails, proceed - backend will validate
+      }
+      
       await api.createVendor({
         name: name.trim(),
         phone: phone.trim() || undefined,
         email: email.trim() || undefined,
         active,
+        store_id: storeId,
       } as Partial<Vendor>);
 
       navigate("/vendors");
@@ -39,12 +60,12 @@ export default function NewVendorPage() {
   return (
     <div>
       {/* Header */}
-      <div className="flex justify-between items-start gap-4 mb-6">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 sm:gap-4 mb-4 md:mb-6">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">New Vendor</h1>
-          <p className="text-sm text-gray-600">Create a new vendor in your system</p>
+          <h1 className="text-xl sm:text-2xl md:text-3xl font-bold text-gray-900 mb-1 sm:mb-2">New Vendor</h1>
+          <p className="text-xs sm:text-sm text-gray-600">Create a new vendor in your system</p>
         </div>
-        <Link to="/vendors" className="btn">
+        <Link to="/vendors" className="btn w-full sm:w-auto text-center">
           ← Back
         </Link>
       </div>

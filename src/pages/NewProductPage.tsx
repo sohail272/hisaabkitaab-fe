@@ -1,9 +1,11 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { api, type Vendor } from "../api";
+import { useAuth } from "../contexts/AuthContext";
 
 export default function NewProductPage() {
   const navigate = useNavigate();
+  const { currentStore, user } = useAuth();
   const [vendors, setVendors] = useState<Vendor[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -64,6 +66,26 @@ export default function NewProductPage() {
     const st = currentStock.trim() === "" ? 0 : parseInt(currentStock.trim(), 10);
 
     try {
+      // Get store_id - use currentStore for org admins, or user's store
+      const storeId = currentStore?.id || user?.store?.id;
+      
+      // Check for duplicate SKU if provided (backend will also validate, but this gives immediate feedback)
+      if (sku.trim()) {
+        try {
+          const existingProducts = await api.listProducts();
+          const duplicate = existingProducts.find(
+            (p) => p.sku && p.sku.toLowerCase() === sku.trim().toLowerCase()
+          );
+          if (duplicate) {
+            setError(`A product with SKU "${sku.trim()}" already exists in this store`);
+            setLoading(false);
+            return;
+          }
+        } catch {
+          // If check fails, proceed - backend will validate
+        }
+      }
+      
       await api.createProduct({
         name: name.trim(),
         description: description.trim() || undefined,
@@ -74,6 +96,7 @@ export default function NewProductPage() {
         barcode: barcode.trim() || undefined,
         active,
         vendor_id: vendorId ? (vendorId as number) : undefined,
+        store_id: storeId,
       });
 
       navigate("/products");

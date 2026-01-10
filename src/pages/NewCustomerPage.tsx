@@ -1,9 +1,11 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { api } from "../api";
+import { useAuth } from "../contexts/AuthContext";
 
 export default function NewCustomerPage() {
   const nav = useNavigate();
+  const { currentStore, user } = useAuth();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [name, setName] = useState("");
@@ -22,12 +24,31 @@ export default function NewCustomerPage() {
     setError(null);
     setLoading(true);
     try {
+      // Get store_id - use currentStore for org admins, or user's store
+      const storeId = currentStore?.id || user?.store?.id;
+      
+      // Check for duplicate customer phone (backend will also validate, but this gives immediate feedback)
+      try {
+        const existingCustomers = await api.listCustomers();
+        const duplicate = existingCustomers.find(
+          (c) => c.phone && c.phone === phone.trim()
+        );
+        if (duplicate) {
+          setError(`A customer with phone number "${phone.trim()}" already exists in this store`);
+          setLoading(false);
+          return;
+        }
+      } catch {
+        // If check fails, proceed - backend will validate
+      }
+      
       const customer = await api.createCustomer({
         name: name.trim(),
         phone: phone.trim(),
         email: email.trim() || undefined,
         address: address.trim() || undefined,
         active,
+        store_id: storeId,
       });
       nav(`/customers/${customer.id}`);
     } catch (e: unknown) {

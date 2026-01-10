@@ -1,6 +1,8 @@
 import { useEffect, useState, useMemo } from "react";
 import { Link } from "react-router-dom";
 import { api } from "../api";
+import { useAuth } from "../contexts/AuthContext";
+import ConfirmModal from "../components/ConfirmModal";
 
 type DashboardData = {
   today_sales: { count: number; total: number };
@@ -96,11 +98,13 @@ function formatTime(dateStr?: string | null) {
 }
 
 export default function DashboardPage() {
+  const { currentStore, user, isOrgAdmin } = useAuth();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [data, setData] = useState<DashboardData | null>(null);
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
   const [searchQuery, setSearchQuery] = useState("");
+  const [showBulkDeleteModal, setShowBulkDeleteModal] = useState(false);
 
   useEffect(() => {
     async function load() {
@@ -116,7 +120,7 @@ export default function DashboardPage() {
       }
     }
     load();
-  }, []);
+  }, [currentStore?.id]);
 
   const filteredInvoices = useMemo(() => {
     if (!data?.recent_invoices) return [];
@@ -153,11 +157,13 @@ export default function DashboardPage() {
   const allSelected = filteredInvoices.length > 0 && selectedIds.size === filteredInvoices.length;
   const someSelected = selectedIds.size > 0 && selectedIds.size < filteredInvoices.length;
 
-  const handleBulkDelete = async () => {
+  const handleBulkDeleteClick = () => {
     if (selectedIds.size === 0) return;
-    if (!confirm(`Are you sure you want to delete ${selectedIds.size} invoice(s)? This action cannot be undone.`)) {
-      return;
-    }
+    setShowBulkDeleteModal(true);
+  };
+
+  const handleBulkDeleteConfirm = async () => {
+    setShowBulkDeleteModal(false);
     // TODO: Implement bulk delete API call
     alert("Bulk delete functionality will be implemented");
     setSelectedIds(new Set());
@@ -182,8 +188,10 @@ export default function DashboardPage() {
   return (
     <div>
       <div className="mb-4 md:mb-6">
-        <h1 className="text-xl sm:text-2xl md:text-3xl font-bold text-gray-900 mb-1">Dashboard</h1>
-        <p className="text-xs md:text-sm text-gray-600">Overview of your business today</p>
+        <div>
+          <h1 className="text-xl sm:text-2xl md:text-3xl font-bold text-gray-900 mb-1">Dashboard</h1>
+          <p className="text-xs md:text-sm text-gray-600">Overview of your business today</p>
+        </div>
       </div>
 
       {/* Stats Cards */}
@@ -224,7 +232,7 @@ export default function DashboardPage() {
           <div className="flex items-center gap-2 flex-nowrap">
             {selectedIds.size > 0 && (
               <button
-                onClick={handleBulkDelete}
+                onClick={handleBulkDeleteClick}
                 className="btn btn-danger btn-sm flex items-center justify-center whitespace-nowrap"
               >
                 Delete ({selectedIds.size})
@@ -464,6 +472,17 @@ export default function DashboardPage() {
           </div>
         </div>
       )}
+
+      {/* Bulk Delete Confirmation Modal */}
+      <ConfirmModal
+        isOpen={showBulkDeleteModal}
+        title="Delete Invoices"
+        message={`Are you sure you want to delete ${selectedIds.size} invoice(s)? This action cannot be undone.`}
+        onConfirm={handleBulkDeleteConfirm}
+        onCancel={() => setShowBulkDeleteModal(false)}
+        isLoading={false}
+        error={null}
+      />
     </div>
   );
 }

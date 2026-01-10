@@ -1,8 +1,11 @@
 import { useEffect, useState, useMemo } from "react";
 import { Link } from "react-router-dom";
 import { api, type Product, type Vendor } from "../api";
+import { useAuth } from "../contexts/AuthContext";
+import ConfirmModal from "../components/ConfirmModal";
 
 export default function ProductsPage() {
+  const { currentStore } = useAuth();
   const [query, setQuery] = useState("");
   const [items, setItems] = useState<Product[]>([]);
   const [vendors, setVendors] = useState<Vendor[]>([]);
@@ -10,6 +13,9 @@ export default function ProductsPage() {
   const [error, setError] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<number | null>(null);
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState<{ id: number; name: string } | null>(null);
+  const [showBulkDeleteModal, setShowBulkDeleteModal] = useState(false);
 
   async function load(q?: string) {
     setLoading(true);
@@ -30,7 +36,7 @@ export default function ProductsPage() {
 
   useEffect(() => {
     load();
-  }, []);
+  }, [currentStore?.id]);
 
   const filteredItems = useMemo(() => {
     if (!query.trim()) return items;
@@ -75,30 +81,36 @@ export default function ProductsPage() {
   const allSelected = filteredItems.length > 0 && selectedIds.size === filteredItems.length;
   const someSelected = selectedIds.size > 0 && selectedIds.size < filteredItems.length;
 
-  async function handleDelete(id: number, name: string) {
-    if (!confirm(`Are you sure you want to delete "${name}"? This action cannot be undone.`)) {
-      return;
-    }
+  const handleDeleteClick = (id: number, name: string) => {
+    setDeleteTarget({ id, name });
+    setShowDeleteModal(true);
+  };
 
-    setDeletingId(id);
+  const handleDeleteConfirm = async () => {
+    if (!deleteTarget) return;
+
+    setShowDeleteModal(false);
+    setDeletingId(deleteTarget.id);
     setError(null);
     try {
-      await api.deleteProduct(id);
+      await api.deleteProduct(deleteTarget.id);
       await load(query);
       setSelectedIds(new Set());
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : "Delete failed");
     } finally {
       setDeletingId(null);
+      setDeleteTarget(null);
     }
-  }
+  };
 
-  const handleBulkDelete = async () => {
+  const handleBulkDeleteClick = () => {
     if (selectedIds.size === 0) return;
-    if (!confirm(`Are you sure you want to delete ${selectedIds.size} product(s)? This action cannot be undone.`)) {
-      return;
-    }
+    setShowBulkDeleteModal(true);
+  };
 
+  const handleBulkDeleteConfirm = async () => {
+    setShowBulkDeleteModal(false);
     setError(null);
     const idsArray = Array.from(selectedIds);
     try {
@@ -132,7 +144,7 @@ export default function ProductsPage() {
           <div className="flex gap-2 flex-wrap w-full sm:w-auto">
             {selectedIds.size > 0 && (
               <button
-                onClick={handleBulkDelete}
+                onClick={handleBulkDeleteClick}
                 className="btn btn-danger btn-sm"
               >
                 Delete ({selectedIds.size})
@@ -298,7 +310,7 @@ export default function ProductsPage() {
                             className="text-red-600 hover:text-red-900 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                             onClick={(e) => {
                               e.stopPropagation();
-                              handleDelete(p.id, p.name);
+                              handleDeleteClick(p.id, p.name);
                             }}
                             disabled={deletingId === p.id}
                             title={deletingId === p.id ? "Deleting..." : "Delete"}
@@ -323,6 +335,27 @@ export default function ProductsPage() {
           </div>
         )}
       </div>
+
+      {/* Delete Confirmation Modal */}
+      <ConfirmModal
+        isOpen={showDeleteModal}
+        title="Delete Product"
+        message={deleteTarget ? `Are you sure you want to delete "${deleteTarget.name}"? This action cannot be undone.` : ""}
+        onConfirm={handleDeleteConfirm}
+        onCancel={() => {
+          setShowDeleteModal(false);
+          setDeleteTarget(null);
+        }}
+      />
+
+      {/* Bulk Delete Confirmation Modal */}
+      <ConfirmModal
+        isOpen={showBulkDeleteModal}
+        title="Delete Products"
+        message={`Are you sure you want to delete ${selectedIds.size} product(s)? This action cannot be undone.`}
+        onConfirm={handleBulkDeleteConfirm}
+        onCancel={() => setShowBulkDeleteModal(false)}
+      />
     </div>
   );
 }
