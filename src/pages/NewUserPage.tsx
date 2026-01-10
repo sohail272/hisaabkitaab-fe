@@ -33,7 +33,7 @@ export default function NewUserPage() {
     try {
       const data = await api.listStores();
       setStores(data);
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error("Failed to load stores:", err);
     }
   };
@@ -90,8 +90,9 @@ export default function NewUserPage() {
         active: formData.active,
       });
       navigate("/users");
-    } catch (err: any) {
-      setError(err.message || "Failed to create user");
+    } catch (err: unknown) {
+      const errorMessage = err instanceof Error ? err.message : "Failed to create user";
+      setError(errorMessage);
       setLoading(false);
     }
   };

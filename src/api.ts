@@ -87,6 +87,7 @@ export type Product = {
   current_stock: number;
   active: boolean;
   vendor_id?: number | null;
+  store_id?: number | null;
   vendor?: Vendor | null;
 };
 
@@ -105,6 +106,7 @@ export type Store = {
   code: string;
   address?: string | null;
   phone?: string | null;
+  email?: string | null;
   active: boolean;
   organization_id: number;
 };
@@ -117,6 +119,7 @@ export type User = {
   role: 'store_worker' | 'store_manager' | 'org_admin';
   active: boolean;
   organization_id: number;
+  store_id?: number | null;
   store?: {
     id: number;
     name: string;
@@ -133,6 +136,7 @@ export type Customer = {
   email?: string | null;
   address?: string | null;
   active: boolean;
+  store_id?: number | null;
 };
 
 export type PurchaseItemInput = {
@@ -194,6 +198,7 @@ export type Invoice = {
   customer_name?: string | null;
   customer_phone?: string | null;
   customer?: Customer | null;
+  store_id?: number | null;
   store?: Store | null;
 
   subtotal: string;
@@ -261,6 +266,7 @@ export const api = {
     note?: string; 
     purchase_items_attributes: PurchaseItemInput[];
     payment?: { amount: string; payment_method?: string; note?: string };
+    store_id?: number;
   }) =>
     request<Purchase>(`/purchases`, { method: "POST", body: JSON.stringify({ purchase: body }) }),
   updatePurchase: (id: number, body: { 
@@ -268,6 +274,7 @@ export const api = {
     note?: string; 
     purchase_items_attributes?: PurchaseItemInput[];
     payment?: { amount: string; payment_method?: string; note?: string };
+    store_id?: number;
   }) =>
     request<Purchase>(`/purchases/${id}`, { method: "PUT", body: JSON.stringify({ purchase: body }) }),
   deletePurchase: (id: number) =>
@@ -278,9 +285,9 @@ export const api = {
   // Invoices
   listInvoices: () => request<Invoice[]>(`/invoices`),
   getInvoice: (id: number) => request<Invoice>(`/invoices/${id}`),
-  createInvoice: (body: { customer_id?: number; customer_name?: string; customer_phone?: string; discount_total?: string; roundoff?: string; payment_method?: string; billed_at?: string; invoice_items_attributes: InvoiceItemInput[] }) =>
+  createInvoice: (body: { customer_id?: number; customer_name?: string; customer_phone?: string; discount_total?: string; roundoff?: string; payment_method?: string; billed_at?: string; store_id?: number; invoice_items_attributes: InvoiceItemInput[] }) =>
     request<Invoice>(`/invoices`, { method: "POST", body: JSON.stringify({ invoice: body }) }),
-  updateInvoice: (id: number, body: { customer_id?: number; customer_name?: string; customer_phone?: string; discount_total?: string; roundoff?: string; payment_method?: string; billed_at?: string; invoice_items_attributes?: InvoiceItemInput[] }) =>
+  updateInvoice: (id: number, body: { customer_id?: number; customer_name?: string; customer_phone?: string; discount_total?: string; roundoff?: string; payment_method?: string; billed_at?: string; store_id?: number; invoice_items_attributes?: InvoiceItemInput[] }) =>
     request<Invoice>(`/invoices/${id}`, { method: "PUT", body: JSON.stringify({ invoice: body }) }),
   deleteInvoice: (id: number) =>
     request<void>(`/invoices/${id}`, { method: "DELETE" }),

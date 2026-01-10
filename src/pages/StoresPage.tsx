@@ -25,8 +25,9 @@ export default function StoresPage() {
       const data = await api.listStores();
       setStores(data);
       setError("");
-    } catch (err: any) {
-      setError(err.message || "Failed to load stores");
+    } catch (err: unknown) {
+      const errorMessage = err instanceof Error ? err.message : "Failed to load stores";
+      setError(errorMessage);
     } finally {
       setLoading(false);
     }
@@ -41,8 +42,9 @@ export default function StoresPage() {
         active: !currentStatus,
       });
       await loadStores();
-    } catch (err: any) {
-      setError(err.message || "Failed to update store status");
+    } catch (err: unknown) {
+      const errorMessage = err instanceof Error ? err.message : "Failed to update store status";
+      setError(errorMessage);
     }
   };
 

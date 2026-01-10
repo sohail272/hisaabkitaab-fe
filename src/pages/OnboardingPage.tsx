@@ -143,8 +143,9 @@ export default function OnboardingPage() {
         
         // Redirect to dashboard
         navigate('/dashboard');
-      } catch (err: any) {
-        setError(err.message || 'Failed to complete onboarding');
+      } catch (err: unknown) {
+        const errorMessage = err instanceof Error ? err.message : 'Failed to complete onboarding';
+        setError(errorMessage);
         setLoading(false);
       }
     }

@@ -1,6 +1,6 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useNavigate, Link, useParams } from "react-router-dom";
-import { api, type Store } from "../api";
+import { api } from "../api";
 import { useAuth } from "../contexts/AuthContext";
 
 export default function NewStorePage() {
@@ -21,13 +21,7 @@ export default function NewStorePage() {
     active: true,
   });
 
-  useEffect(() => {
-    if (isEditMode && id) {
-      loadStore();
-    }
-  }, [id, isEditMode]);
-
-  const loadStore = async () => {
+  const loadStore = useCallback(async () => {
     if (!id) return;
     setLoadingStore(true);
     setError("");
@@ -41,12 +35,19 @@ export default function NewStorePage() {
         email: store.email || "",
         active: store.active,
       });
-    } catch (err: any) {
-      setError(err.message || "Failed to load store");
+    } catch (err: unknown) {
+      const errorMessage = err instanceof Error ? err.message : "Failed to load store";
+      setError(errorMessage);
     } finally {
       setLoadingStore(false);
     }
-  };
+  }, [id]);
+
+  useEffect(() => {
+    if (isEditMode && id) {
+      loadStore();
+    }
+  }, [id, isEditMode, loadStore]);
 
   if (!isOrgAdmin) {
     return (
@@ -77,8 +78,9 @@ export default function NewStorePage() {
         });
       }
       navigate("/stores");
-    } catch (err: any) {
-      setError(err.message || `Failed to ${isEditMode ? "update" : "create"} store`);
+    } catch (err: unknown) {
+      const errorMessage = err instanceof Error ? err.message : `Failed to ${isEditMode ? "update" : "create"} store`;
+      setError(errorMessage);
       setLoading(false);
     }
   };

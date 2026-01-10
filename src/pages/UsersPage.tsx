@@ -30,8 +30,9 @@ export default function UsersPage() {
       const data = await api.listUsers();
       setUsers(data);
       setError("");
-    } catch (err: any) {
-      setError(err.message || "Failed to load users");
+    } catch (err: unknown) {
+      const errorMessage = err instanceof Error ? err.message : "Failed to load users";
+      setError(errorMessage);
     } finally {
       setLoading(false);
     }
@@ -54,9 +55,9 @@ export default function UsersPage() {
       setDeleteTarget(null);
       setDeleteError(null);
       await loadUsers();
-    } catch (err: any) {
+    } catch (err: unknown) {
       // Keep modal open and show error - DO NOT reload data
-      const errorMessage = err.message || "Delete failed";
+      const errorMessage = err instanceof Error ? err.message : "Delete failed";
       setDeleteError(errorMessage);
       // Don't clear items - they should remain in the table
     } finally {
@@ -74,8 +75,9 @@ export default function UsersPage() {
         active: !currentStatus,
       });
       await loadUsers();
-    } catch (err: any) {
-      setError(err.message || "Failed to update user status");
+    } catch (err: unknown) {
+      const errorMessage = err instanceof Error ? err.message : "Failed to update user status";
+      setError(errorMessage);
     }
   };
 

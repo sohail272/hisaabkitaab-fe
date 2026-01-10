@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useNavigate, useParams, Link } from "react-router-dom";
 import { api, Store, User } from "../api";
 import { useAuth } from "../contexts/AuthContext";
@@ -24,30 +24,20 @@ export default function EditUserPage() {
     active: true,
   });
 
-  useEffect(() => {
-    if (!isOrgAdmin) {
-      return;
-    }
-
-    loadStores();
-    if (id) {
-      loadUser();
-    }
-  }, [id, isOrgAdmin]);
-
-  const loadStores = async () => {
+  const loadStores = useCallback(async () => {
     try {
       const data = await api.listStores();
       setStores(data);
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error("Failed to load stores:", err);
     }
-  };
+  }, []);
 
-  const loadUser = async () => {
+  const loadUser = useCallback(async () => {
+    if (!id) return;
     try {
       setLoading(true);
-      const data = await api.getUser(parseInt(id!));
+      const data = await api.getUser(parseInt(id));
       setUser(data);
       setFormData({
         name: data.name,
@@ -60,12 +50,24 @@ export default function EditUserPage() {
         active: data.active,
       });
       setError("");
-    } catch (err: any) {
-      setError(err.message || "Failed to load user");
+    } catch (err: unknown) {
+      const errorMessage = err instanceof Error ? err.message : "Failed to load user";
+      setError(errorMessage);
     } finally {
       setLoading(false);
     }
-  };
+  }, [id]);
+
+  useEffect(() => {
+    if (!isOrgAdmin) {
+      return;
+    }
+
+    loadStores();
+    if (id) {
+      loadUser();
+    }
+  }, [id, isOrgAdmin, loadStores, loadUser]);
 
   if (!isOrgAdmin) {
     return (
@@ -109,7 +111,7 @@ export default function EditUserPage() {
     }
 
     try {
-      const updateData: any = {
+      const updateData: Partial<User & { password?: string }> = {
         name: formData.name,
         email: formData.email,
         phone: formData.phone || undefined,
@@ -124,8 +126,9 @@ export default function EditUserPage() {
 
       await api.updateUser(parseInt(id!), updateData);
       navigate("/users");
-    } catch (err: any) {
-      setError(err.message || "Failed to update user");
+    } catch (err: unknown) {
+      const errorMessage = err instanceof Error ? err.message : "Failed to update user";
+      setError(errorMessage);
       setSaving(false);
     }
   };

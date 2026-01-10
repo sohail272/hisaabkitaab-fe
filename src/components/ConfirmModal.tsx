@@ -10,6 +10,7 @@ interface ConfirmModalProps {
   onCancel: () => void;
   isDanger?: boolean;
   isLoading?: boolean;
+  error?: string | null;
 }
 
 export default function ConfirmModal({
@@ -22,6 +23,7 @@ export default function ConfirmModal({
   onCancel,
   isDanger = true,
   isLoading = false,
+  error = null,
 }: ConfirmModalProps) {
   // Close on Escape key
   useEffect(() => {
@@ -57,9 +59,14 @@ export default function ConfirmModal({
 
           {/* Body */}
           <div className="px-6 py-4">
-            <p className={`text-sm ${message.includes("Cannot delete") || message.toLowerCase().includes("error") ? "text-red-700 font-medium" : "text-gray-700"}`}>
+            <p className="text-sm text-gray-700">
               {message}
             </p>
+            {error && (
+              <div className="mt-3 p-3 rounded-lg bg-red-100 text-red-800 text-sm">
+                {error}
+              </div>
+            )}
           </div>
 
           {/* Footer */}

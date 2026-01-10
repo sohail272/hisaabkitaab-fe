@@ -98,7 +98,7 @@ function formatTime(dateStr?: string | null) {
 }
 
 export default function DashboardPage() {
-  const { currentStore, user, isOrgAdmin } = useAuth();
+  const { currentStore } = useAuth();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [data, setData] = useState<DashboardData | null>(null);
